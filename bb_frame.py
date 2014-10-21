@@ -1,6 +1,9 @@
 '''
 John Choiniere's Baseball Simulator
 
+---See LICENSE.txt for licensing/use information.
+------Licensed under the Apache 2.0 license.
+
 ---Based on odds ratio calculations as explained by Tom Tango (aka Tangotiger)
 here: http://www.insidethebook.com/ee/index.php/site/comments/the_odds_ratio_method/
 
@@ -10,6 +13,7 @@ here: http://www.insidethebook.com/ee/index.php/site/comments/the_odds_ratio_met
 ------Right now, the program crashes if the user
 ------inputs something incorrectly (typos,
 ------uncapitalized names, nonexistent players, etc).
+---------UPDATE: now have error handling on names, not yet on year
 
 ---To do: Clean up results
 ------Currently just printing dictionaries. Would be
@@ -166,25 +170,53 @@ def build_rosters():
 	season_import(year)
 	#No subbing mech. yet, so just goes 1-9 for batters (lineup order)
 	while hb < 9:
-		player = input(str(hb+1)+"th Player (Home): ")
-		home_team_lineup[hb] = player
-		home_team_stats[player] = all_batters[player]
-		hb += 1
+		try:
+			player = input(str(hb+1)+"th Player (Home): ")
+			firstname, lastname = player.split()
+			player = firstname.capitalize()+" "+lastname.capitalize()
+			home_team_lineup[hb] = player
+			home_team_stats[player] = all_batters[player]
+			hb += 1
+		except ValueError:
+			print("ERROR: Invalid Name Construction, try again")
+		except KeyError:
+			print("ERROR: Player Not Found, try again")
 	while hp < 1:
-		pitcher = input(str(hp+1)+"st Pitcher (Home): ")
-		home_team_pitchers[hp] = pitcher
-		home_team_pstats[pitcher] = all_pitchers[pitcher]
-		hp += 1
+		try:
+			pitcher = input(str(hp+1)+"st Pitcher (Home): ")
+			firstname, lastname = pitcher.split()
+			pitcher = firstname.capitalize()+" "+lastname.capitalize()
+			home_team_pitchers[hp] = pitcher
+			home_team_pstats[pitcher] = all_pitchers[pitcher]
+			hp += 1
+		except ValueError:
+			print("ERROR: Invalid Name Construction, try again")
+		except KeyError:
+			print("ERROR: Player Not Found, try again")
 	while ab < 9:
-		player = input(str(ab+1)+"th Player (Away): ")
-		away_team_lineup[ab] = player
-		away_team_stats[player] = all_batters[player]
-		ab += 1
+		try:
+			player = input(str(ab+1)+"th Player (Away): ")
+			firstname, lastname = player.split()
+			player = firstname.capitalize()+" "+lastname.capitalize()
+			away_team_lineup[ab] = player
+			away_team_stats[player] = all_batters[player]
+			ab += 1
+		except ValueError:
+			print("ERROR: Invalid Name Construction, try again")
+		except KeyError:
+			print("ERROR: Player Not Found, try again")
 	while ap < 1:
-		pitcher = input(str(ap+1)+"st Pitcher (Away): ")
-		away_team_pitchers[ap] = pitcher
-		away_team_pstats[pitcher] = all_pitchers[pitcher]
-		ap += 1
+		try:
+			pitcher = input(str(ap+1)+"st Pitcher (Away): ")
+			firstname, lastname = pitcher.split()
+			pitcher = firstname.capitalize()+" "+lastname.capitalize()
+			away_team_pitchers[ap] = pitcher
+			away_team_pstats[pitcher] = all_pitchers[pitcher]
+			ap += 1
+		except ValueError:
+			print("ERROR: Invalid Name Construction, try again")
+		except KeyError:
+			print("ERROR: Player Not Found, try again")
 
 #Function for setting all odds to values for specific players and leagues
 def set_odds(batter, pitcher):
