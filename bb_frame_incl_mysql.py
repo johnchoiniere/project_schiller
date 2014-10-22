@@ -14,8 +14,6 @@ here: http://www.insidethebook.com/ee/index.php/site/comments/the_odds_ratio_met
 ------better to format printing, and give user option
 ------to save results to CSV file. Also need to add
 ------result ratio calculation (i.e., AVG, OBP)
----------Update, evening 21 October: formatted batting nicely.
----------Should probably make it a function eventually.
 
 ---To do: Improve baserunning
 
@@ -31,7 +29,9 @@ These are where the program draws its stats from.
 3. When prompted, enter the year from which to draw stats for the sim.
 4. As prompted, enter home and away batting lineups, with a single pitcher
 for each team. It's up to you whether the pitcher bats or not, but he would
-need to be entered as both a batter and pitcher if so.
+need to be entered as both a batter and pitcher if so. PLEASE NOTE that any
+typos, non-capitalization, or other errors (including entering someone who
+didn't play in a given year) will crash the whole thing.
 5. Enter the number of games you wish to simulate.
 6. See your results!
 
@@ -49,6 +49,9 @@ you try this out.
 
 import random
 import time
+import mysql.connector
+from mysql.connector import errorcode
+from collections import Counter
 import csv
 
 #Function for testing MySQL connection
@@ -104,6 +107,41 @@ def season_import():
 		#print(all_batters)
 		#print(all_pitchers)
 		#print(mlb)
+		
+#Function for finding retrosheet_ID for db lookup from typed input
+#DEPRECATED as of converting to CSV input, can be deleted eventually
+def get_retroid(player):
+	cnx = mysql.connector.connect(user='root',password='Louis and Marie',database='baseball')
+	cursor = cnx.cursor()
+	query = ("SELECT retroID FROM master_new_retro_ids WHERE (nameFirst = %s and nameLast = %s)")
+	firstname,lastname = player.split()
+	cursor.execute(query,(firstname,lastname))
+	retroid = cursor.fetchone()
+	return retroid[0]
+
+#Function for getting relevant stats based on get_retroid() output from db
+#DEPRECATED as of converting to CSV input, can be deleted eventually
+def get_hitting_stats(player):
+	player = get_retroid(player)
+	cnx = mysql.connector.connect(user='root',password='Louis and Marie',database='baseball')
+	cursor = cnx.cursor(dictionary=True)
+	query = ("select resp_bat_ID AS retroid,sum(if(event_cd=16,1,0))/count(*) AS hbp_pct,sum(if(event_cd<>16,1,0))/count(*) AS nonhbp_pct,sum(if(event_cd=3 OR event_cd=14 OR event_cd=15,1,0))/sum(if(event_cd<>16,1,0)) AS noncontact_per_nonhbp_pct,sum(if(event_cd<>3 AND event_cd<>14 AND event_cd<>15,1,0))/sum(if(event_cd<>16,1,0)) AS contact_per_nonhbp_pct,sum(if(event_cd=3,1,0))/sum(if(event_cd=3 or event_cd=14,1,0)) AS k_per_noncontact_pct,sum(if(event_cd=14,1,0))/sum(if(event_cd=3 or event_cd=14,1,0)) AS bb_per_noncontact_pct,sum(if(battedball_cd='G',1,0))/sum(if(battedball_cd<>'',1,0)) AS onground_per_contact_pct,sum(if(battedball_cd<>'G' and battedball_cd<>'',1,0))/sum(if(battedball_cd<>'',1,0)) AS inair_per_contact_pct,sum(if(battedball_cd='P',1,0))/sum(if(battedball_cd<>'' and battedball_cd<>'G',1,0)) AS iffb_per_inair_pct,sum(if(battedball_cd='L' or battedball_cd='F',1,0))/sum(if(battedball_cd<>'' and battedball_cd<>'G',1,0)) AS noniffb_per_inair_pct,sum(if(event_cd=23 AND (battedball_cd='F' OR battedball_cd='L'),1,0))/sum(if(battedball_cd='F' or battedball_cd='L',1,0)) AS hr_per_noniffb_pct,sum(if(event_cd<>23 AND (battedball_cd='F' OR battedball_cd='L'),1,0))/sum(if(battedball_cd='F' or battedball_cd='L',1,0)) AS nonhr_per_noniffb_pct,sum(if(battedball_cd='L' AND event_cd<>23,1,0))/sum(if(event_cd<>23 AND (battedball_cd='L' OR battedball_cd='F'),1,0)) AS ld_per_nonhr_pct,sum(if(battedball_cd='F' AND event_cd<>23,1,0))/sum(if(event_cd<>23 AND (battedball_cd='L' OR battedball_cd='F'),1,0)) AS fb_per_nonhr_pct,sum(if(event_cd<20 AND battedball_cd='L',1,0))/sum(if(battedball_cd='L' AND event_cd<>23,1,0)) AS out_per_ld_pct,sum(if(event_cd>19 AND event_cd<23 AND battedball_cd='L',1,0))/sum(if(battedball_cd='L' AND event_cd<>23,1,0)) AS nonout_per_ld_pct,sum(if(event_cd=20 AND battedball_cd='L',1,0))/sum(if(event_cd>19 AND event_cd<23 AND battedball_cd='L',1,0)) AS single_per_nonoutl_pct,sum(if((event_cd=21 or event_cd=22) AND battedball_cd='L',1,0))/sum(if(event_cd>19 AND event_cd<23 AND battedball_cd='L',1,0)) AS xb_per_nonoutl_pct,sum(if(event_cd<20 AND battedball_cd='F',1,0))/sum(if(battedball_cd='F' AND event_cd<>23,1,0)) AS out_per_fb_pct,sum(if(event_cd>19 AND event_cd<23 AND battedball_cd='F',1,0))/sum(if(battedball_cd='F' AND event_cd<>23,1,0)) AS nonout_per_fb_pct,sum(if(event_cd=20 AND battedball_cd='F',1,0))/sum(if(event_cd>19 AND event_cd<23 AND battedball_cd='f',1,0)) AS single_per_nonoutf_pct,sum(if((event_cd=21 or event_cd=22) AND battedball_cd='F',1,0))/sum(if(event_cd>19 AND event_cd<23 AND battedball_cd='F',1,0)) AS xb_per_nonoutf_pct,sum(if(event_cd<20 AND battedball_cd='G',1,0))/sum(if(battedball_cd='G',1,0)) AS out_per_onground_pct,sum(if(event_cd>19 AND event_cd<23 AND battedball_cd='G',1,0))/sum(if(battedball_cd='G',1,0)) AS nonout_per_onground_pct,sum(if(event_cd=20 AND battedball_cd='G',1,0))/sum(if(event_cd>19 AND event_cd<23 AND battedball_cd='G',1,0)) AS single_per_nonoutg_pct,sum(if((event_cd=21 or event_cd=22) AND battedball_cd='G',1,0))/sum(if(event_cd>19 AND event_cd<23 AND battedball_cd='G',1,0)) AS xb_per_nonoutg_pct from events_regseason WHERE (year_ID = 2013 AND bat_event_fl='T' AND bunt_fl<>'T' AND foul_fl<>'T' AND event_cd<>15 AND resp_bat_ID = '%s')")
+	cursor.execute(query % player)
+	stat_line = cursor.fetchall()
+	#print(stat_line)
+	return stat_line
+
+#Function for getting relevant stats based on get_retroid() output from db
+#DEPRECATED as of converting to CSV input, can be deleted eventually
+def get_pitching_stats(player):
+	player = get_retroid(player)
+	cnx = mysql.connector.connect(user='root',password='Louis and Marie',database='baseball')
+	cursor = cnx.cursor(dictionary=True)
+	query = ("select res_pit_ID AS retroid,sum(if(event_cd=16,1,0))/count(*) AS hbp_pct,sum(if(event_cd<>16,1,0))/count(*) AS nonhbp_pct,sum(if(event_cd=3 OR event_cd=14 OR event_cd=15,1,0))/sum(if(event_cd<>16,1,0)) AS noncontact_per_nonhbp_pct,sum(if(event_cd<>3 AND event_cd<>14 AND event_cd<>15,1,0))/sum(if(event_cd<>16,1,0)) AS contact_per_nonhbp_pct,sum(if(event_cd=3,1,0))/sum(if(event_cd=3 or event_cd=14,1,0)) AS k_per_noncontact_pct,sum(if(event_cd=14,1,0))/sum(if(event_cd=3 or event_cd=14,1,0)) AS bb_per_noncontact_pct,sum(if(battedball_cd='G',1,0))/sum(if(battedball_cd<>'',1,0)) AS onground_per_contact_pct,sum(if(battedball_cd<>'G' and battedball_cd<>'',1,0))/sum(if(battedball_cd<>'',1,0)) AS inair_per_contact_pct,sum(if(battedball_cd='P',1,0))/sum(if(battedball_cd<>'' and battedball_cd<>'G',1,0)) AS iffb_per_inair_pct,sum(if(battedball_cd='L' or battedball_cd='F',1,0))/sum(if(battedball_cd<>'' and battedball_cd<>'G',1,0)) AS noniffb_per_inair_pct,sum(if(event_cd=23 AND (battedball_cd='F' OR battedball_cd='L'),1,0))/sum(if(battedball_cd='F' or battedball_cd='L',1,0)) AS hr_per_noniffb_pct,sum(if(event_cd<>23 AND (battedball_cd='F' OR battedball_cd='L'),1,0))/sum(if(battedball_cd='F' or battedball_cd='L',1,0)) AS nonhr_per_noniffb_pct,sum(if(battedball_cd='L' AND event_cd<>23,1,0))/sum(if(event_cd<>23 AND (battedball_cd='L' OR battedball_cd='F'),1,0)) AS ld_per_nonhr_pct,sum(if(battedball_cd='F' AND event_cd<>23,1,0))/sum(if(event_cd<>23 AND (battedball_cd='L' OR battedball_cd='F'),1,0)) AS fb_per_nonhr_pct,sum(if(event_cd<20 AND battedball_cd='L',1,0))/sum(if(battedball_cd='L' AND event_cd<>23,1,0)) AS out_per_ld_pct,sum(if(event_cd>19 AND event_cd<23 AND battedball_cd='L',1,0))/sum(if(battedball_cd='L' AND event_cd<>23,1,0)) AS nonout_per_ld_pct,sum(if(event_cd=20 AND battedball_cd='L',1,0))/sum(if(event_cd>19 AND event_cd<23 AND battedball_cd='L',1,0)) AS single_per_nonoutl_pct,sum(if((event_cd=21 or event_cd=22) AND battedball_cd='L',1,0))/sum(if(event_cd>19 AND event_cd<23 AND battedball_cd='L',1,0)) AS xb_per_nonoutl_pct,sum(if(event_cd<20 AND battedball_cd='F',1,0))/sum(if(battedball_cd='F' AND event_cd<>23,1,0)) AS out_per_fb_pct,sum(if(event_cd>19 AND event_cd<23 AND battedball_cd='F',1,0))/sum(if(battedball_cd='F' AND event_cd<>23,1,0)) AS nonout_per_fb_pct,sum(if(event_cd=20 AND battedball_cd='F',1,0))/sum(if(event_cd>19 AND event_cd<23 AND battedball_cd='f',1,0)) AS single_per_nonoutf_pct,sum(if((event_cd=21 or event_cd=22) AND battedball_cd='F',1,0))/sum(if(event_cd>19 AND event_cd<23 AND battedball_cd='F',1,0)) AS xb_per_nonoutf_pct,sum(if(event_cd<20 AND battedball_cd='G',1,0))/sum(if(battedball_cd='G',1,0)) AS out_per_onground_pct,sum(if(event_cd>19 AND event_cd<23 AND battedball_cd='G',1,0))/sum(if(battedball_cd='G',1,0)) AS nonout_per_onground_pct,sum(if(event_cd=20 AND battedball_cd='G',1,0))/sum(if(event_cd>19 AND event_cd<23 AND battedball_cd='G',1,0)) AS single_per_nonoutg_pct,sum(if((event_cd=21 or event_cd=22) AND battedball_cd='G',1,0))/sum(if(event_cd>19 AND event_cd<23 AND battedball_cd='G',1,0)) AS xb_per_nonoutg_pct from events_regseason WHERE (year_ID = 2013 AND bat_event_fl='T' AND bunt_fl<>'T' AND foul_fl<>'T' AND event_cd<>15 AND res_pit_ID = '%s')")
+	cursor.execute(query % player)
+	stat_line = cursor.fetchall()
+	#print(stat_line)
+	return stat_line
 
 #Function for assembling team starting lineups
 def build_rosters():
@@ -503,7 +541,7 @@ def pbp():
 	inning = 0
 	inning_outs = 0
 	away_team_at_bat = True
-	while (outs < 51 or (outs < 54 and home_runs <= away_runs)):
+	while (outs < 51 or (outs >= 51 and home_runs == away_runs)):
 		if away_team_at_bat == True:
 			inning += 1
 			inning_outs = 0
@@ -515,7 +553,6 @@ def pbp():
 				pitcher = home_team_pitchers[current_home_pitcher]
 				set_odds(away_team_stats[batter],home_team_pstats[pitcher])
 				event = PA_outcome()
-#				print("away_event: "+event)
 				home_pitching_stats[pitcher]['TBF'] += 1
 				if event == "iffb" or event == "gbout" or event == "fbout" or event == "ldout":
 					#No advancement on outs for now
@@ -997,44 +1034,10 @@ def baseball_sim():
 	while i < games:
 		pbp()
 		i += 1
-	print("-"*(8*9+5))
-	if games >= 100:
-		print("Home Batters"+"\t"+"\t"+"PA/G"+"\t"+"H/G"+"\t"+"R/G"+"\t"+"RBI/G"+"\t"+"BB/G"+"\t"+"K/G"+"\t"+"avg")
-	else:
-		print("Home Batters"+"\t"+"\t"+"PA"+"\t"+"H"+"\t"+"R"+"\t"+"RBI"+"\t"+"BB"+"\t"+"K"+"\t"+"avg")
-	print("-"*(8*9+5))
-	for key in home_team_lineup:
-		if games >= 100:
-			print(home_team_lineup[key]+"\t"+"\t"+str(home_hitting_stats[home_team_lineup[key]]['PA']/games)+"\t"+str(home_hitting_stats[home_team_lineup[key]]['H']/games)+"\t"+str(home_hitting_stats[home_team_lineup[key]]['R']/games)+"\t"+str(home_hitting_stats[home_team_lineup[key]]['RBI']/games)+"\t"+str(home_hitting_stats[home_team_lineup[key]]['BB']/games)+"\t"+str(home_hitting_stats[home_team_lineup[key]]['K']/games)+"\t"+str("{:.3f}".format(home_hitting_stats[home_team_lineup[key]]['H']/home_hitting_stats[home_team_lineup[key]]['AB'])))
-		else:
-			print(home_team_lineup[key]+"\t"+"\t"+str(home_hitting_stats[home_team_lineup[key]]['PA'])+"\t"+str(home_hitting_stats[home_team_lineup[key]]['H'])+"\t"+str(home_hitting_stats[home_team_lineup[key]]['R'])+"\t"+str(home_hitting_stats[home_team_lineup[key]]['RBI'])+"\t"+str(home_hitting_stats[home_team_lineup[key]]['BB'])+"\t"+str(home_hitting_stats[home_team_lineup[key]]['K'])+"\t"+str("{:.3f}".format(home_hitting_stats[home_team_lineup[key]]['H']/home_hitting_stats[home_team_lineup[key]]['AB'])))
-	print("-"*(8*9+5))
-	if games >= 100:
-		print("Totals\t\t\t"+str(sum(home_hitting_stats[p]['PA'] for p in home_hitting_stats)/games)+"\t"+str(sum(home_hitting_stats[p]['H'] for p in home_hitting_stats)/games)+"\t"+str(sum(home_hitting_stats[p]['R'] for p in home_hitting_stats)/games)+"\t"+str(sum(home_hitting_stats[p]['RBI'] for p in home_hitting_stats)/games)+"\t"+str(sum(home_hitting_stats[p]['BB'] for p in home_hitting_stats)/games)+"\t"+str(sum(home_hitting_stats[p]['K'] for p in home_hitting_stats)/games)+"\t"+str("{:.3f}".format((sum(home_hitting_stats[p]['H'] for p in home_hitting_stats))/(sum(home_hitting_stats[p]['AB'] for p in home_hitting_stats)))))
-	else:
-		print("Totals\t\t\t"+str(sum(home_hitting_stats[p]['PA'] for p in home_hitting_stats))+"\t"+str(sum(home_hitting_stats[p]['H'] for p in home_hitting_stats))+"\t"+str(sum(home_hitting_stats[p]['R'] for p in home_hitting_stats))+"\t"+str(sum(home_hitting_stats[p]['RBI'] for p in home_hitting_stats))+"\t"+str(sum(home_hitting_stats[p]['BB'] for p in home_hitting_stats))+"\t"+str(sum(home_hitting_stats[p]['K'] for p in home_hitting_stats))+"\t"+str("{:.3f}".format((sum(home_hitting_stats[p]['H'] for p in home_hitting_stats))/(sum(home_hitting_stats[p]['AB'] for p in home_hitting_stats)))))
-	print("\n")
+	print(home_hitting_stats)
 	print(home_pitching_stats)
-	print("-"*(8*9+5))
-
-	if games >= 100:
-		print("Away Batters"+"\t"+"\t"+"PA/G"+"\t"+"H/G"+"\t"+"R/G"+"\t"+"RBI/G"+"\t"+"BB/G"+"\t"+"K/G"+"\t"+"avg")
-	else:
-		print("Away Batters"+"\t"+"\t"+"PA"+"\t"+"H"+"\t"+"R"+"\t"+"RBI"+"\t"+"BB"+"\t"+"K"+"\t"+"avg")
-	print("-"*(8*9+5))
-	for key in away_team_lineup:
-		if games >= 100:
-			print(away_team_lineup[key]+"\t"+"\t"+str(away_hitting_stats[away_team_lineup[key]]['PA']/games)+"\t"+str(away_hitting_stats[away_team_lineup[key]]['H']/games)+"\t"+str(away_hitting_stats[away_team_lineup[key]]['R']/games)+"\t"+str(away_hitting_stats[away_team_lineup[key]]['RBI']/games)+"\t"+str(away_hitting_stats[away_team_lineup[key]]['BB']/games)+"\t"+str(away_hitting_stats[away_team_lineup[key]]['K']/games)+"\t"+str("{:.3f}".format(away_hitting_stats[away_team_lineup[key]]['H']/away_hitting_stats[away_team_lineup[key]]['AB'])))
-		else:
-			print(away_team_lineup[key]+"\t"+"\t"+str(away_hitting_stats[away_team_lineup[key]]['PA'])+"\t"+str(away_hitting_stats[away_team_lineup[key]]['H'])+"\t"+str(away_hitting_stats[away_team_lineup[key]]['R'])+"\t"+str(away_hitting_stats[away_team_lineup[key]]['RBI'])+"\t"+str(away_hitting_stats[away_team_lineup[key]]['BB'])+"\t"+str(away_hitting_stats[away_team_lineup[key]]['K'])+"\t"+str("{:.3f}".format(away_hitting_stats[away_team_lineup[key]]['H']/away_hitting_stats[away_team_lineup[key]]['AB'])))
-	print("-"*(8*9+5))
-	if games >= 100:
-		print("Totals\t\t\t"+str(sum(away_hitting_stats[p]['PA'] for p in away_hitting_stats)/games)+"\t"+str(sum(away_hitting_stats[p]['H'] for p in away_hitting_stats)/games)+"\t"+str(sum(away_hitting_stats[p]['R'] for p in away_hitting_stats)/games)+"\t"+str(sum(away_hitting_stats[p]['RBI'] for p in away_hitting_stats)/games)+"\t"+str(sum(away_hitting_stats[p]['BB'] for p in away_hitting_stats)/games)+"\t"+str(sum(away_hitting_stats[p]['K'] for p in away_hitting_stats)/games)+"\t"+str("{:.3f}".format((sum(away_hitting_stats[p]['H'] for p in away_hitting_stats))/(sum(away_hitting_stats[p]['AB'] for p in away_hitting_stats)))))
-	else:
-		print("Totals\t\t\t"+str(sum(away_hitting_stats[p]['PA'] for p in away_hitting_stats))+"\t"+str(sum(away_hitting_stats[p]['H'] for p in away_hitting_stats))+"\t"+str(sum(away_hitting_stats[p]['R'] for p in away_hitting_stats))+"\t"+str(sum(away_hitting_stats[p]['RBI'] for p in away_hitting_stats))+"\t"+str(sum(away_hitting_stats[p]['BB'] for p in away_hitting_stats))+"\t"+str(sum(away_hitting_stats[p]['K'] for p in away_hitting_stats))+"\t"+str("{:.3f}".format((sum(away_hitting_stats[p]['H'] for p in away_hitting_stats))/(sum(away_hitting_stats[p]['AB'] for p in away_hitting_stats)))))
-	print("\n")
+	print(away_hitting_stats)
 	print(away_pitching_stats)
-	print("-"*(8*9+5))
 	print("Home wins: "+str(home_wins))
 	print("Away wins: "+str(away_wins))
 	
