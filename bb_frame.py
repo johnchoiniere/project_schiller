@@ -7,17 +7,13 @@ John Choiniere's Baseball Simulator
 ---Based on odds ratio calculations as explained by Tom Tango (aka Tangotiger)
 here: http://www.insidethebook.com/ee/index.php/site/comments/the_odds_ratio_method/
 
----Last update: 21 October 2014
-
----NEXT THING To do: Clean up results
-------Currently just printing dictionaries. Would be
-------better to format printing, and give user option
-------to save results to CSV file. Also need to add
-------result ratio calculation (i.e., AVG, OBP)
----------Update, evening 21 October: formatted batting nicely.
----------Should probably make it a function eventually.
+---Last update: 23 October 2014
 
 ---To do: Improve baserunning
+------Data updated with 2B/3B split, need to add it in to sim
+
+---To do: Clean up results
+------Should probably make it a function eventually.
 
 
 CURRENT INSTRUCTIONS (Windows, anything else you're on your own):
@@ -51,26 +47,11 @@ import random
 import time
 import csv
 
-#Function for testing MySQL connection
-#DEPRECATED as of converting to CSV input, can be deleted eventually
-def test_db():
-	try:
-		cnx = mysql.connector.connect(user='root',password='Louis and Marie',database='baseball')
-	except mysql.connector.Error as err:
-		if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
-			print("Something is wrong with your user name or password")
-		elif err.errno == errorcode.ER_BAD_DB_ERROR:
-			print("Database does not exists")
-		else:
-			print(err)
-	else:
-		cnx.close()
-
 #Function for importing seasonal data from CSVs.
 #For batters, pitchers, and league (I'd like to write league a little different in the future)
 #it loads the associated file with the year it's given, and creates either a dictionary of
 #dictionaries in the case of batters/pitchers or just a plain old dictionary for MLB.
-#The dictionaries all_batters and all_pitchers use player name (capitalized) as the keys
+#The dictionaries all_batters and all_pitchers use player name (lowerd) as the keys
 #and dictionaries of the needed binomial ratios in the format (stat_name(str) : float) as the values
 def season_import():
 	y = 0
@@ -107,7 +88,7 @@ def season_import():
 
 #Function for assembling team starting lineups
 def build_rosters():
-	#Establishes dictionaries of player names and ratios for each team
+#Establishes dictionaries of player names and ratios for each team
 	global home_team_lineup
 	global home_team_stats
 	global home_team_pitchers
@@ -135,7 +116,7 @@ def build_rosters():
 		try:
 			player = input(str(hb+1)+"th Player (Home): ")
 			firstname, lastname = player.split()
-			player = firstname.capitalize()+" "+lastname.capitalize()
+			player = firstname.lower()+" "+lastname.lower()
 			home_team_lineup[hb] = player
 			home_team_stats[player] = all_batters[player]
 			hb += 1
@@ -147,7 +128,7 @@ def build_rosters():
 		try:
 			pitcher = input(str(hp+1)+"st Pitcher (Home): ")
 			firstname, lastname = pitcher.split()
-			pitcher = firstname.capitalize()+" "+lastname.capitalize()
+			pitcher = firstname.lower()+" "+lastname.lower()
 			home_team_pitchers[hp] = pitcher
 			home_team_pstats[pitcher] = all_pitchers[pitcher]
 			hp += 1
@@ -159,7 +140,7 @@ def build_rosters():
 		try:
 			player = input(str(ab+1)+"th Player (Away): ")
 			firstname, lastname = player.split()
-			player = firstname.capitalize()+" "+lastname.capitalize()
+			player = firstname.lower()+" "+lastname.lower()
 			away_team_lineup[ab] = player
 			away_team_stats[player] = all_batters[player]
 			ab += 1
@@ -171,7 +152,7 @@ def build_rosters():
 		try:
 			pitcher = input(str(ap+1)+"st Pitcher (Away): ")
 			firstname, lastname = pitcher.split()
-			pitcher = firstname.capitalize()+" "+lastname.capitalize()
+			pitcher = firstname.lower()+" "+lastname.lower()
 			away_team_pitchers[ap] = pitcher
 			away_team_pstats[pitcher] = all_pitchers[pitcher]
 			ap += 1
@@ -1005,18 +986,27 @@ def baseball_sim():
 	print("-"*(8*9+5))
 	for key in home_team_lineup:
 		if games >= 100:
-			print(home_team_lineup[key]+"\t"+"\t"+str(home_hitting_stats[home_team_lineup[key]]['PA']/games)+"\t"+str(home_hitting_stats[home_team_lineup[key]]['H']/games)+"\t"+str(home_hitting_stats[home_team_lineup[key]]['R']/games)+"\t"+str(home_hitting_stats[home_team_lineup[key]]['RBI']/games)+"\t"+str(home_hitting_stats[home_team_lineup[key]]['BB']/games)+"\t"+str(home_hitting_stats[home_team_lineup[key]]['K']/games)+"\t"+str("{:.3f}".format(home_hitting_stats[home_team_lineup[key]]['H']/home_hitting_stats[home_team_lineup[key]]['AB'])))
+			print(home_team_lineup[key]+" "*(24-len(home_team_lineup[key]))+str(home_hitting_stats[home_team_lineup[key]]['PA']/games)+"\t"+str(home_hitting_stats[home_team_lineup[key]]['H']/games)+"\t"+str(home_hitting_stats[home_team_lineup[key]]['R']/games)+"\t"+str(home_hitting_stats[home_team_lineup[key]]['RBI']/games)+"\t"+str(home_hitting_stats[home_team_lineup[key]]['BB']/games)+"\t"+str(home_hitting_stats[home_team_lineup[key]]['K']/games)+"\t"+str("{:.3f}".format(home_hitting_stats[home_team_lineup[key]]['H']/home_hitting_stats[home_team_lineup[key]]['AB'])))
 		else:
-			print(home_team_lineup[key]+"\t"+"\t"+str(home_hitting_stats[home_team_lineup[key]]['PA'])+"\t"+str(home_hitting_stats[home_team_lineup[key]]['H'])+"\t"+str(home_hitting_stats[home_team_lineup[key]]['R'])+"\t"+str(home_hitting_stats[home_team_lineup[key]]['RBI'])+"\t"+str(home_hitting_stats[home_team_lineup[key]]['BB'])+"\t"+str(home_hitting_stats[home_team_lineup[key]]['K'])+"\t"+str("{:.3f}".format(home_hitting_stats[home_team_lineup[key]]['H']/home_hitting_stats[home_team_lineup[key]]['AB'])))
+			print(home_team_lineup[key]+" "*(24-len(home_team_lineup[key]))+str(home_hitting_stats[home_team_lineup[key]]['PA'])+"\t"+str(home_hitting_stats[home_team_lineup[key]]['H'])+"\t"+str(home_hitting_stats[home_team_lineup[key]]['R'])+"\t"+str(home_hitting_stats[home_team_lineup[key]]['RBI'])+"\t"+str(home_hitting_stats[home_team_lineup[key]]['BB'])+"\t"+str(home_hitting_stats[home_team_lineup[key]]['K'])+"\t"+str("{:.3f}".format(home_hitting_stats[home_team_lineup[key]]['H']/home_hitting_stats[home_team_lineup[key]]['AB'])))
 	print("-"*(8*9+5))
 	if games >= 100:
 		print("Totals\t\t\t"+str(sum(home_hitting_stats[p]['PA'] for p in home_hitting_stats)/games)+"\t"+str(sum(home_hitting_stats[p]['H'] for p in home_hitting_stats)/games)+"\t"+str(sum(home_hitting_stats[p]['R'] for p in home_hitting_stats)/games)+"\t"+str(sum(home_hitting_stats[p]['RBI'] for p in home_hitting_stats)/games)+"\t"+str(sum(home_hitting_stats[p]['BB'] for p in home_hitting_stats)/games)+"\t"+str(sum(home_hitting_stats[p]['K'] for p in home_hitting_stats)/games)+"\t"+str("{:.3f}".format((sum(home_hitting_stats[p]['H'] for p in home_hitting_stats))/(sum(home_hitting_stats[p]['AB'] for p in home_hitting_stats)))))
 	else:
 		print("Totals\t\t\t"+str(sum(home_hitting_stats[p]['PA'] for p in home_hitting_stats))+"\t"+str(sum(home_hitting_stats[p]['H'] for p in home_hitting_stats))+"\t"+str(sum(home_hitting_stats[p]['R'] for p in home_hitting_stats))+"\t"+str(sum(home_hitting_stats[p]['RBI'] for p in home_hitting_stats))+"\t"+str(sum(home_hitting_stats[p]['BB'] for p in home_hitting_stats))+"\t"+str(sum(home_hitting_stats[p]['K'] for p in home_hitting_stats))+"\t"+str("{:.3f}".format((sum(home_hitting_stats[p]['H'] for p in home_hitting_stats))/(sum(home_hitting_stats[p]['AB'] for p in home_hitting_stats)))))
 	print("\n")
-	print(home_pitching_stats)
+	if games >= 100:
+		print("-"*(8*9+5))
+		print("Home Pitchers\t\tIP/G\tH/G\tRA\tK/G\tBB/G\tK/BB")
+	else:
+		print("Home Pitchers\t\tIP\tH\tRuns\tK\tBB\tRAA")
 	print("-"*(8*9+5))
-
+	for key in home_team_pitchers:
+		if games >= 100:
+			print(home_team_pitchers[key]+"\t"+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['Outs']/3/games)+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['H']/games)+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['RA']/games)+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['K']/games)+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['BB']/games)+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['K']/home_pitching_stats[home_team_pitchers[key]]['BB']))
+		else:
+			print(home_team_pitchers[key]+"\t"+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['Outs']/3)+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['H'])+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['RA'])+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['K'])+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['BB'])+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['K']/home_pitching_stats[home_team_pitchers[key]]['BB']))
+	print("-"*(8*9+5)+"\n\n")
 	if games >= 100:
 		print("Away Batters"+"\t"+"\t"+"PA/G"+"\t"+"H/G"+"\t"+"R/G"+"\t"+"RBI/G"+"\t"+"BB/G"+"\t"+"K/G"+"\t"+"avg")
 	else:
@@ -1024,16 +1014,26 @@ def baseball_sim():
 	print("-"*(8*9+5))
 	for key in away_team_lineup:
 		if games >= 100:
-			print(away_team_lineup[key]+"\t"+"\t"+str(away_hitting_stats[away_team_lineup[key]]['PA']/games)+"\t"+str(away_hitting_stats[away_team_lineup[key]]['H']/games)+"\t"+str(away_hitting_stats[away_team_lineup[key]]['R']/games)+"\t"+str(away_hitting_stats[away_team_lineup[key]]['RBI']/games)+"\t"+str(away_hitting_stats[away_team_lineup[key]]['BB']/games)+"\t"+str(away_hitting_stats[away_team_lineup[key]]['K']/games)+"\t"+str("{:.3f}".format(away_hitting_stats[away_team_lineup[key]]['H']/away_hitting_stats[away_team_lineup[key]]['AB'])))
+			print(away_team_lineup[key]+" "*(24-len(away_team_lineup[key]))+str(away_hitting_stats[away_team_lineup[key]]['PA']/games)+"\t"+str(away_hitting_stats[away_team_lineup[key]]['H']/games)+"\t"+str(away_hitting_stats[away_team_lineup[key]]['R']/games)+"\t"+str(away_hitting_stats[away_team_lineup[key]]['RBI']/games)+"\t"+str(away_hitting_stats[away_team_lineup[key]]['BB']/games)+"\t"+str(away_hitting_stats[away_team_lineup[key]]['K']/games)+"\t"+str("{:.3f}".format(away_hitting_stats[away_team_lineup[key]]['H']/away_hitting_stats[away_team_lineup[key]]['AB'])))
 		else:
-			print(away_team_lineup[key]+"\t"+"\t"+str(away_hitting_stats[away_team_lineup[key]]['PA'])+"\t"+str(away_hitting_stats[away_team_lineup[key]]['H'])+"\t"+str(away_hitting_stats[away_team_lineup[key]]['R'])+"\t"+str(away_hitting_stats[away_team_lineup[key]]['RBI'])+"\t"+str(away_hitting_stats[away_team_lineup[key]]['BB'])+"\t"+str(away_hitting_stats[away_team_lineup[key]]['K'])+"\t"+str("{:.3f}".format(away_hitting_stats[away_team_lineup[key]]['H']/away_hitting_stats[away_team_lineup[key]]['AB'])))
+			print(away_team_lineup[key]+" "*(24-len(away_team_lineup[key]))+str(away_hitting_stats[away_team_lineup[key]]['PA'])+"\t"+str(away_hitting_stats[away_team_lineup[key]]['H'])+"\t"+str(away_hitting_stats[away_team_lineup[key]]['R'])+"\t"+str(away_hitting_stats[away_team_lineup[key]]['RBI'])+"\t"+str(away_hitting_stats[away_team_lineup[key]]['BB'])+"\t"+str(away_hitting_stats[away_team_lineup[key]]['K'])+"\t"+str("{:.3f}".format(away_hitting_stats[away_team_lineup[key]]['H']/away_hitting_stats[away_team_lineup[key]]['AB'])))
 	print("-"*(8*9+5))
 	if games >= 100:
 		print("Totals\t\t\t"+str(sum(away_hitting_stats[p]['PA'] for p in away_hitting_stats)/games)+"\t"+str(sum(away_hitting_stats[p]['H'] for p in away_hitting_stats)/games)+"\t"+str(sum(away_hitting_stats[p]['R'] for p in away_hitting_stats)/games)+"\t"+str(sum(away_hitting_stats[p]['RBI'] for p in away_hitting_stats)/games)+"\t"+str(sum(away_hitting_stats[p]['BB'] for p in away_hitting_stats)/games)+"\t"+str(sum(away_hitting_stats[p]['K'] for p in away_hitting_stats)/games)+"\t"+str("{:.3f}".format((sum(away_hitting_stats[p]['H'] for p in away_hitting_stats))/(sum(away_hitting_stats[p]['AB'] for p in away_hitting_stats)))))
 	else:
 		print("Totals\t\t\t"+str(sum(away_hitting_stats[p]['PA'] for p in away_hitting_stats))+"\t"+str(sum(away_hitting_stats[p]['H'] for p in away_hitting_stats))+"\t"+str(sum(away_hitting_stats[p]['R'] for p in away_hitting_stats))+"\t"+str(sum(away_hitting_stats[p]['RBI'] for p in away_hitting_stats))+"\t"+str(sum(away_hitting_stats[p]['BB'] for p in away_hitting_stats))+"\t"+str(sum(away_hitting_stats[p]['K'] for p in away_hitting_stats))+"\t"+str("{:.3f}".format((sum(away_hitting_stats[p]['H'] for p in away_hitting_stats))/(sum(away_hitting_stats[p]['AB'] for p in away_hitting_stats)))))
 	print("\n")
-	print(away_pitching_stats)
+	if games >= 100:
+		print("-"*(8*9+5))
+		print("Away Pitchers\t\tIP/G\tH/G\tRA\tK/G\tBB/G\tK/BB")
+	else:
+		print("Away Pitchers\t\tIP\tH\tRuns\tK\tBB\tRAA")
+	print("-"*(8*9+5))
+	for key in away_team_pitchers:
+		if games >= 100:
+			print(away_team_pitchers[key]+"\t"+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['Outs']/3/games)+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['H']/games)+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['RA']/games)+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['K']/games)+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['BB']/games)+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['K']/away_pitching_stats[away_team_pitchers[key]]['BB']))
+		else:
+			print(away_team_pitchers[key]+"\t"+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['Outs']/3)+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['H'])+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['RA'])+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['K'])+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['BB'])+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['K']/away_pitching_stats[away_team_pitchers[key]]['BB']))
 	print("-"*(8*9+5))
 	print("Home wins: "+str(home_wins))
 	print("Away wins: "+str(away_wins))
