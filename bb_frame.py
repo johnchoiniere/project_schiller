@@ -7,7 +7,10 @@ John Choiniere's Baseball Simulator
 ---Based on odds ratio calculations as explained by Tom Tango (aka Tangotiger)
 here: http://www.insidethebook.com/ee/index.php/site/comments/the_odds_ratio_method/
 
----Last update: 23 October 2014
+---Last update: 30 October 2014
+
+---NEXT to do: Non-batter outs
+------Figure out a way to get double plays, fielder's choices, errors
 
 ---To do: Improve baserunning
 ------Data updated with 2B/3B split, need to add it in to sim
@@ -469,6 +472,7 @@ def pbp():
 	global current_away_pitcher
 	global away_wins
 	global home_wins
+	global ties
 	#For each game, initializes at zero: outs, current place in 
 	#home and away lineups (and pitchers), team runs, inning, and outs per inning.
 	#Also sets batting team to away.
@@ -484,7 +488,9 @@ def pbp():
 	inning = 0
 	inning_outs = 0
 	away_team_at_bat = True
-	while (outs < 51 or (outs < 54 and home_runs <= away_runs)):
+	game_over = False
+#	while (inning < 9 or (inning == 9 and away_team_at_bat == True) or (inning == 9 and away_team_at_bat == False and home_runs <= away_runs) or (inning > 9 and home_runs <= away_runs and outs % 6 != 0) or (inning > 9 and home_runs == away_runs and outs % 6 == 0)): 
+	while game_over == False:
 		if away_team_at_bat == True:
 			inning += 1
 			inning_outs = 0
@@ -498,15 +504,29 @@ def pbp():
 				event = PA_outcome()
 #				print("away_event: "+event)
 				home_pitching_stats[pitcher]['TBF'] += 1
-				if event == "iffb" or event == "gbout" or event == "fbout" or event == "ldout":
-					#No advancement on outs for now
+				if event == "iffb":
 					outs += 1
 					inning_outs += 1
-					#note that hitting_stats or pitching_stats are record-keeping dictionaries,
-					#as opposed to team_stats or team_pstats, which establish odds,
-					#I will eventually rename things so they're not so similar.
 					away_hitting_stats[batter]['PA'] += 1
 					away_hitting_stats[batter]['AB'] += 1	
+					home_pitching_stats[pitcher]['Outs'] += 1
+				elif event == "gbout":
+					outs += 1
+					inning_outs += 1
+					away_hitting_stats[batter]['PA'] += 1
+					away_hitting_stats[batter]['PA'] += 1
+					home_pitching_stats[pitcher]['Outs'] += 1	
+				elif event == "fbout":
+					outs += 1
+					inning_outs += 1
+					away_hitting_stats[batter]['PA'] += 1
+					away_hitting_stats[batter]['AB'] += 1
+					home_pitching_stats[pitcher]['Outs'] += 1
+				elif event == "ldout":
+					outs += 1
+					inning_outs += 1
+					away_hitting_stats[batter]['PA'] += 1
+					away_hitting_stats[batter]['AB'] += 1
 					home_pitching_stats[pitcher]['Outs'] += 1
 				elif event == "k":
 					#No dropped 3rd strike yet
@@ -526,7 +546,6 @@ def pbp():
 					away_hitting_stats[batter]['HR'] += 1
 					away_hitting_stats[batter]['H'] += 1
 					away_hitting_stats[batter]['RBI'] += 1
-					away_hitting_stats[batter]['XB'] += 1
 					home_pitching_stats[pitcher]['HR'] += 1
 					home_pitching_stats[pitcher]['RA'] += 1
 					home_pitching_stats[pitcher]['H'] += 1
@@ -559,6 +578,7 @@ def pbp():
 						away_runs+=1
 						away_hitting_stats[batter]['RBI'] += 1
 						away_hitting_stats[third_base]['R'] += 1
+						home_pitching_stats[pitcher]['RA'] += 1
 					third_base = second_base
 					second_base = first_base
 					first_base = away_team_lineup[current_away_batter]				
@@ -615,75 +635,142 @@ def pbp():
 					away_hitting_stats[batter]['PA'] += 1
 					away_hitting_stats[batter]['AB'] += 1
 					away_hitting_stats[batter]['H'] += 1
-					away_hitting_stats[batter]['XB'] += 1
 					home_pitching_stats[pitcher]['H'] += 1
-					#Bases clear on a line drive XB hit,
-					#and all XB hits (any type) are doubles
-					if third_base != "":
-						away_runs += 1
-						away_hitting_stats[batter]['RBI'] += 1
-						away_hitting_stats[third_base]['R'] += 1
-						home_pitching_stats[pitcher]['RA'] += 1
-						third_base = ""
-					if second_base != "":
-						away_runs += 1
-						away_hitting_stats[batter]['RBI'] += 1
-						away_hitting_stats[second_base]['R'] += 1
-						home_pitching_stats[pitcher]['RA'] += 1
-						second_base = ""
-					if first_base != "":
-						away_runs += 1
-						away_hitting_stats[batter]['RBI'] += 1
-						away_hitting_stats[first_base]['R'] += 1
-						home_pitching_stats[pitcher]['RA'] += 1
-						first_base = ""
-					second_base = away_team_lineup[current_away_batter]				
+					extra_bases_event = random.random()
+					if extra_bases_event > float(away_team_stats[batter]['double_per_xb_l']):
+						away_hitting_stats[batter]['3B'] += 1
+						if third_base != "":
+							away_runs += 1
+							away_hitting_stats[batter]['RBI'] += 1
+							away_hitting_stats[third_base]['R'] += 1
+							home_pitching_stats[pitcher]['RA'] += 1
+							third_base = ""
+						if second_base != "":
+							away_runs += 1
+							away_hitting_stats[batter]['RBI'] += 1
+							away_hitting_stats[second_base]['R'] += 1
+							home_pitching_stats[pitcher]['RA'] += 1
+							second_base = ""
+						if first_base != "":
+							away_runs += 1
+							away_hitting_stats[batter]['RBI'] += 1
+							away_hitting_stats[first_base]['R'] += 1
+							home_pitching_stats[pitcher]['RA'] += 1
+							first_base = ""
+						third_base = away_team_lineup[current_away_batter]
+					else:
+						away_hitting_stats[batter]['2B'] += 1	
+						if third_base != "":
+							away_runs += 1
+							away_hitting_stats[batter]['RBI'] += 1
+							away_hitting_stats[third_base]['R'] += 1
+							home_pitching_stats[pitcher]['RA'] += 1
+							third_base = ""
+						if second_base != "":
+							away_runs += 1
+							away_hitting_stats[batter]['RBI'] += 1
+							away_hitting_stats[second_base]['R'] += 1
+							home_pitching_stats[pitcher]['RA'] += 1
+							second_base = ""
+						if first_base != "":
+							away_runs += 1
+							away_hitting_stats[batter]['RBI'] += 1
+							away_hitting_stats[first_base]['R'] += 1
+							home_pitching_stats[pitcher]['RA'] += 1
+							first_base = ""
+						second_base = away_team_lineup[current_away_batter]
 				elif event == "fbxb":
 					away_hits += 1
 					away_hitting_stats[batter]['PA'] += 1
 					away_hitting_stats[batter]['AB'] += 1
 					away_hitting_stats[batter]['H'] += 1
-					away_hitting_stats[batter]['XB'] += 1
 					home_pitching_stats[pitcher]['H'] += 1
-					if third_base != "":
-						away_runs += 1
-						away_hitting_stats[batter]['RBI'] += 1
-						away_hitting_stats[third_base]['R'] += 1
-						home_pitching_stats[pitcher]['RA'] += 1
-						third_base = ""
-					elif second_base != "":
-						away_runs += 1
-						away_hitting_stats[batter]['RBI'] += 1
-						away_hitting_stats[second_base]['R'] += 1
-						home_pitching_stats[pitcher]['RA'] += 1
-						second_base = ""
-					elif first_base != "":
-						third_base = first_base
-						first_base = ""
-					second_base = away_team_lineup[current_away_batter]				
+					extra_bases_event = random.random()
+					if extra_bases_event > float(away_team_stats[batter]['double_per_xb_f']):
+						away_hitting_stats[batter]['3B'] += 1
+						if third_base != "":
+							away_runs += 1
+							away_hitting_stats[batter]['RBI'] += 1
+							away_hitting_stats[third_base]['R'] += 1
+							home_pitching_stats[pitcher]['RA'] += 1
+							third_base = ""
+						elif second_base != "":
+							away_runs += 1
+							away_hitting_stats[batter]['RBI'] += 1
+							away_hitting_stats[second_base]['R'] += 1
+							home_pitching_stats[pitcher]['RA'] += 1
+							second_base = ""
+						elif first_base != "":
+							away_runs += 1
+							away_hitting_stats[batter]['RBI'] += 1
+							away_hitting_stats[first_base]['R'] += 1
+							home_pitching_stats[pitcher]['RA'] += 1
+							first_base = ""
+						third_base = away_team_lineup[current_away_batter]
+					else:
+						away_hitting_stats[batter]['2B'] += 1					
+						if third_base != "":
+							away_runs += 1
+							away_hitting_stats[batter]['RBI'] += 1
+							away_hitting_stats[third_base]['R'] += 1
+							home_pitching_stats[pitcher]['RA'] += 1
+							third_base = ""
+						elif second_base != "":
+							away_runs += 1
+							away_hitting_stats[batter]['RBI'] += 1
+							away_hitting_stats[second_base]['R'] += 1
+							home_pitching_stats[pitcher]['RA'] += 1
+							second_base = ""
+						elif first_base != "":
+							third_base = first_base
+							first_base = ""
+						second_base = away_team_lineup[current_away_batter]				
 				elif event == "gbxb":
 					away_hits += 1
 					away_hitting_stats[batter]['PA'] += 1
 					away_hitting_stats[batter]['AB'] += 1
 					away_hitting_stats[batter]['H'] += 1
-					away_hitting_stats[batter]['XB'] += 1
 					home_pitching_stats[pitcher]['H'] += 1
-					if third_base != "":
-						away_runs += 1
-						away_hitting_stats[batter]['RBI'] += 1
-						away_hitting_stats[third_base]['R'] += 1
-						home_pitching_stats[pitcher]['RA'] += 1
-						third_base = ""
-					elif second_base != "":
-						away_runs += 1
-						away_hitting_stats[batter]['RBI'] += 1
-						away_hitting_stats[second_base]['R'] += 1
-						home_pitching_stats[pitcher]['RA'] += 1
-						second_base = ""
-					elif first_base != "":
-						third_base = first_base
-						first_base = ""
-					second_base = away_team_lineup[current_away_batter]				
+					extra_bases_event = random.random()
+					if extra_bases_event > float(away_team_stats[batter]['double_per_xb_g']):
+						away_hitting_stats[batter]['3B'] += 1
+						if third_base != "":
+							away_runs += 1
+							away_hitting_stats[batter]['RBI'] += 1
+							away_hitting_stats[third_base]['R'] += 1
+							home_pitching_stats[pitcher]['RA'] += 1
+							third_base = ""
+						elif second_base != "":
+							away_runs += 1
+							away_hitting_stats[batter]['RBI'] += 1
+							away_hitting_stats[second_base]['R'] += 1
+							home_pitching_stats[pitcher]['RA'] += 1
+							second_base = ""
+						elif first_base != "":
+							away_runs += 1
+							away_hitting_stats[batter]['RBI'] += 1
+							away_hitting_stats[first_base]['R'] += 1
+							home_pitching_stats[pitcher]['RA'] += 1
+							first_base = ""
+						third_base = away_team_lineup[current_away_batter]
+					else:
+						away_hitting_stats[batter]['2B'] += 1
+						if third_base != "":
+							away_runs += 1
+							away_hitting_stats[batter]['RBI'] += 1
+							away_hitting_stats[third_base]['R'] += 1
+							home_pitching_stats[pitcher]['RA'] += 1
+							third_base = ""
+						elif second_base != "":
+							away_runs += 1
+							away_hitting_stats[batter]['RBI'] += 1
+							away_hitting_stats[second_base]['R'] += 1
+							home_pitching_stats[pitcher]['RA'] += 1
+							second_base = ""
+						elif first_base != "":
+							third_base = first_base
+							first_base = ""
+						second_base = away_team_lineup[current_away_batter]				
 				elif event == "bb":
 					away_hitting_stats[batter]['PA'] += 1
 					away_hitting_stats[batter]['BB'] += 1
@@ -714,10 +801,10 @@ def pbp():
 					current_away_batter += 1
 				else:
 					current_away_batter = 0
-			#After 3 outs, switch to home batting
+			if inning >= 9 and home_runs > away_runs:
+				game_over = True
 			away_team_at_bat = False
 		else:
-			#same as away stuff, but with inverted home/away
 			inning_outs = 0
 			first_base = ""
 			second_base = ""
@@ -727,15 +814,38 @@ def pbp():
 				pitcher = away_team_pitchers[current_away_pitcher]
 				set_odds(home_team_stats[batter],away_team_pstats[pitcher])
 				event = PA_outcome()
+#				print("home_event: "+event)
 				away_pitching_stats[pitcher]['TBF'] += 1
-#				print("home event: "+event)
-				if event == "iffb" or event == "gbout" or event == "fbout" or event == "ldout":
+				if event == "iffb":
+					#No advancement on outs for now
+					outs += 1
+					inning_outs += 1
+					#note that hitting_stats or pitching_stats are record-keeping dictionaries,
+					#as opposed to team_stats or team_pstats, which establish odds,
+					#I will eventually rename things so they're not so similar.
+					home_hitting_stats[batter]['PA'] += 1
+					home_hitting_stats[batter]['AB'] += 1	
+					away_pitching_stats[pitcher]['Outs'] += 1
+				elif event == "gbout":
+					outs += 1
+					inning_outs += 1
+					home_hitting_stats[batter]['PA'] += 1
+					home_hitting_stats[batter]['PA'] += 1
+					away_pitching_stats[pitcher]['Outs'] += 1	
+				elif event == "fbout":
+					outs += 1
+					inning_outs += 1
+					home_hitting_stats[batter]['PA'] += 1
+					home_hitting_stats[batter]['AB'] += 1
+					away_pitching_stats[pitcher]['Outs'] += 1
+				elif event == "ldout":
 					outs += 1
 					inning_outs += 1
 					home_hitting_stats[batter]['PA'] += 1
 					home_hitting_stats[batter]['AB'] += 1
 					away_pitching_stats[pitcher]['Outs'] += 1
 				elif event == "k":
+					#No dropped 3rd strike yet
 					outs += 1
 					inning_outs += 1
 					home_hitting_stats[batter]['PA'] += 1
@@ -752,10 +862,9 @@ def pbp():
 					home_hitting_stats[batter]['HR'] += 1
 					home_hitting_stats[batter]['H'] += 1
 					home_hitting_stats[batter]['RBI'] += 1
-					home_hitting_stats[batter]['XB'] += 1
-					away_pitching_stats[pitcher]['H'] += 1
 					away_pitching_stats[pitcher]['HR'] += 1
 					away_pitching_stats[pitcher]['RA'] += 1
+					away_pitching_stats[pitcher]['H'] += 1
 					if first_base != "":
 						home_runs += 1
 						home_hitting_stats[batter]['RBI'] += 1
@@ -766,8 +875,8 @@ def pbp():
 						home_runs += 1
 						home_hitting_stats[second_base]['R'] += 1
 						away_pitching_stats[pitcher]['RA'] += 1
-						home_hitting_stats[batter]['RBI'] += 1
-						second_base = ""						
+						second_base = ""
+						home_hitting_stats[batter]['RBI'] += 1						
 					elif third_base != "":
 						home_runs += 1
 						home_hitting_stats[third_base]['R'] += 1
@@ -780,6 +889,7 @@ def pbp():
 					home_hitting_stats[batter]['AB'] += 1
 					home_hitting_stats[batter]['H'] += 1
 					away_pitching_stats[pitcher]['H'] += 1
+					#All runners advance one base on GB single
 					if third_base != "":
 						home_runs+=1
 						home_hitting_stats[batter]['RBI'] += 1
@@ -794,6 +904,8 @@ def pbp():
 					home_hitting_stats[batter]['AB'] += 1
 					home_hitting_stats[batter]['H'] += 1
 					away_pitching_stats[pitcher]['H'] += 1
+					#Runners on 2nd and 3rd always score on LD single,
+					#runner on 1st always goes to 3rd
 					if third_base != "":
 						home_runs += 1
 						home_hitting_stats[batter]['RBI'] += 1
@@ -816,6 +928,8 @@ def pbp():
 					home_hitting_stats[batter]['AB'] += 1
 					home_hitting_stats[batter]['H'] += 1
 					away_pitching_stats[pitcher]['H'] += 1
+					#Runners on 2nd and 3rd always score on FB single,
+					#runner on 1st DOES NOT go to 3rd
 					if third_base != "":
 						home_runs += 1
 						home_hitting_stats[batter]['RBI'] += 1
@@ -829,7 +943,7 @@ def pbp():
 						away_pitching_stats[pitcher]['RA'] += 1
 						second_base = ""
 					elif first_base != "":
-						third_base = first_base
+						second_base = first_base
 						first_base = ""
 					first_base = home_team_lineup[current_home_batter]				
 				elif event == "ldxb":
@@ -838,72 +952,141 @@ def pbp():
 					home_hitting_stats[batter]['AB'] += 1
 					home_hitting_stats[batter]['H'] += 1
 					away_pitching_stats[pitcher]['H'] += 1
-					home_hitting_stats[batter]['XB'] += 1
-					if third_base != "":
-						home_runs += 1
-						home_hitting_stats[batter]['RBI'] += 1
-						home_hitting_stats[third_base]['R'] += 1
-						away_pitching_stats[pitcher]['RA'] += 1
-						third_base = ""
-					elif second_base != "":
-						home_runs += 1
-						home_hitting_stats[batter]['RBI'] += 1
-						home_hitting_stats[second_base]['R'] += 1
-						away_pitching_stats[pitcher]['RA'] += 1
-						second_base = ""
-					elif first_base != "":
-						home_runs += 1
-						home_hitting_stats[batter]['RBI'] += 1
-						home_hitting_stats[first_base]['R'] += 1
-						away_pitching_stats[pitcher]['RA'] += 1
-						first_base = ""
-					second_base = home_team_lineup[current_home_batter]				
+					extra_bases_event = random.random()
+					if extra_bases_event > float(home_team_stats[batter]['double_per_xb_l']):
+						home_hitting_stats[batter]['3B'] += 1
+						if third_base != "":
+							home_runs += 1
+							home_hitting_stats[batter]['RBI'] += 1
+							home_hitting_stats[third_base]['R'] += 1
+							away_pitching_stats[pitcher]['RA'] += 1
+							third_base = ""
+						if second_base != "":
+							home_runs += 1
+							home_hitting_stats[batter]['RBI'] += 1
+							home_hitting_stats[second_base]['R'] += 1
+							away_pitching_stats[pitcher]['RA'] += 1
+							second_base = ""
+						if first_base != "":
+							home_runs += 1
+							home_hitting_stats[batter]['RBI'] += 1
+							home_hitting_stats[first_base]['R'] += 1
+							away_pitching_stats[pitcher]['RA'] += 1
+							first_base = ""
+						third_base = home_team_lineup[current_home_batter]
+					else:
+						home_hitting_stats[batter]['2B'] += 1	
+						if third_base != "":
+							home_runs += 1
+							home_hitting_stats[batter]['RBI'] += 1
+							home_hitting_stats[third_base]['R'] += 1
+							away_pitching_stats[pitcher]['RA'] += 1
+							third_base = ""
+						if second_base != "":
+							home_runs += 1
+							home_hitting_stats[batter]['RBI'] += 1
+							home_hitting_stats[second_base]['R'] += 1
+							away_pitching_stats[pitcher]['RA'] += 1
+							second_base = ""
+						if first_base != "":
+							home_runs += 1
+							home_hitting_stats[batter]['RBI'] += 1
+							home_hitting_stats[first_base]['R'] += 1
+							away_pitching_stats[pitcher]['RA'] += 1
+							first_base = ""
+						second_base = home_team_lineup[current_home_batter]
 				elif event == "fbxb":
 					home_hits += 1
 					home_hitting_stats[batter]['PA'] += 1
 					home_hitting_stats[batter]['AB'] += 1
 					home_hitting_stats[batter]['H'] += 1
 					away_pitching_stats[pitcher]['H'] += 1
-					home_hitting_stats[batter]['XB'] += 1
-					if third_base != "":
-						home_runs += 1
-						home_hitting_stats[batter]['RBI'] += 1
-						home_hitting_stats[third_base]['R'] += 1
-						away_pitching_stats[pitcher]['RA'] += 1
-						third_base = ""
-					elif second_base != "":
-						home_runs += 1
-						home_hitting_stats[batter]['RBI'] += 1
-						home_hitting_stats[second_base]['R'] += 1
-						away_pitching_stats[pitcher]['RA'] += 1
-						second_base = ""
-					elif first_base != "":
-						third_base = first_base
-						first_base = ""
-					second_base = home_team_lineup[current_home_batter]				
+					extra_bases_event = random.random()
+					if extra_bases_event > float(home_team_stats[batter]['double_per_xb_f']):
+						home_hitting_stats[batter]['3B'] += 1
+						if third_base != "":
+							home_runs += 1
+							home_hitting_stats[batter]['RBI'] += 1
+							home_hitting_stats[third_base]['R'] += 1
+							away_pitching_stats[pitcher]['RA'] += 1
+							third_base = ""
+						elif second_base != "":
+							home_runs += 1
+							home_hitting_stats[batter]['RBI'] += 1
+							home_hitting_stats[second_base]['R'] += 1
+							away_pitching_stats[pitcher]['RA'] += 1
+							second_base = ""
+						elif first_base != "":
+							home_runs += 1
+							home_hitting_stats[batter]['RBI'] += 1
+							home_hitting_stats[first_base]['R'] += 1
+							away_pitching_stats[pitcher]['RA'] += 1
+							first_base = ""
+						third_base = home_team_lineup[current_home_batter]
+					else:
+						home_hitting_stats[batter]['2B'] += 1					
+						if third_base != "":
+							home_runs += 1
+							home_hitting_stats[batter]['RBI'] += 1
+							home_hitting_stats[third_base]['R'] += 1
+							away_pitching_stats[pitcher]['RA'] += 1
+							third_base = ""
+						elif second_base != "":
+							home_runs += 1
+							home_hitting_stats[batter]['RBI'] += 1
+							home_hitting_stats[second_base]['R'] += 1
+							away_pitching_stats[pitcher]['RA'] += 1
+							second_base = ""
+						elif first_base != "":
+							third_base = first_base
+							first_base = ""
+						second_base = home_team_lineup[current_home_batter]				
 				elif event == "gbxb":
 					home_hits += 1
 					home_hitting_stats[batter]['PA'] += 1
 					home_hitting_stats[batter]['AB'] += 1
 					home_hitting_stats[batter]['H'] += 1
 					away_pitching_stats[pitcher]['H'] += 1
-					home_hitting_stats[batter]['XB'] += 1
-					if third_base != "":
-						home_runs += 1
-						home_hitting_stats[batter]['RBI'] += 1
-						home_hitting_stats[third_base]['R'] += 1
-						away_pitching_stats[pitcher]['RA'] += 1
-						third_base = ""
-					elif second_base != "":
-						home_runs += 1
-						home_hitting_stats[batter]['RBI'] += 1
-						home_hitting_stats[second_base]['R'] += 1
-						away_pitching_stats[pitcher]['RA'] += 1
-						second_base = ""
-					elif first_base != "":
-						third_base = first_base
-						first_base = ""
-					second_base = home_team_lineup[current_home_batter]				
+					extra_bases_event = random.random()
+					if extra_bases_event > float(home_team_stats[batter]['double_per_xb_g']):
+						home_hitting_stats[batter]['3B'] += 1
+						if third_base != "":
+							home_runs += 1
+							home_hitting_stats[batter]['RBI'] += 1
+							home_hitting_stats[third_base]['R'] += 1
+							away_pitching_stats[pitcher]['RA'] += 1
+							third_base = ""
+						elif second_base != "":
+							home_runs += 1
+							home_hitting_stats[batter]['RBI'] += 1
+							home_hitting_stats[second_base]['R'] += 1
+							away_pitching_stats[pitcher]['RA'] += 1
+							second_base = ""
+						elif first_base != "":
+							home_runs += 1
+							home_hitting_stats[batter]['RBI'] += 1
+							home_hitting_stats[first_base]['R'] += 1
+							away_pitching_stats[pitcher]['RA'] += 1
+							first_base = ""
+						third_base = home_team_lineup[current_home_batter]
+					else:
+						away_hitting_stats[batter]['2B'] += 1
+						if third_base != "":
+							home_runs += 1
+							home_hitting_stats[batter]['RBI'] += 1
+							home_hitting_stats[third_base]['R'] += 1
+							away_pitching_stats[pitcher]['RA'] += 1
+							third_base = ""
+						elif second_base != "":
+							home_runs += 1
+							home_hitting_stats[batter]['RBI'] += 1
+							home_hitting_stats[second_base]['R'] += 1
+							away_pitching_stats[pitcher]['RA'] += 1
+							second_base = ""
+						elif first_base != "":
+							third_base = first_base
+							first_base = ""
+						second_base = home_team_lineup[current_home_batter]				
 				elif event == "bb":
 					home_hitting_stats[batter]['PA'] += 1
 					home_hitting_stats[batter]['BB'] += 1
@@ -927,11 +1110,17 @@ def pbp():
 						away_pitching_stats[pitcher]['RA'] += 1
 					third_base = second_base
 					second_base = first_base
-					first_base = home_team_lineup[current_home_batter]
+					first_base = home_team_lineup[current_home_batter]				
+				#After batting event resolution, advance place in lineup
+				#rotating back to the first batter when appropriate.
 				if current_home_batter <8:
 					current_home_batter += 1
 				else:
 					current_home_batter = 0
+				if inning >= 9 and home_runs > away_runs:
+					game_over = True
+			if inning >= 9 and home_runs != away_runs:
+				game_over = True
 			away_team_at_bat = True
 	#Old post-game printing:
 	#print("Home runs: "+str(home_runs))
@@ -943,8 +1132,10 @@ def pbp():
 	#print("Innings: "+str(inning))
 	if(home_runs > away_runs):
 		home_wins += 1
-	else:
+	elif(home_runs < away_runs):
 		away_wins += 1
+	else:
+		ties += 1
 	
 #Main function. Sets lineups, establishes stat-keeping dictionaries and ints,
 #asks how many games to simulate, and runs pbp() for that many. Shows player stats
@@ -957,17 +1148,19 @@ def baseball_sim():
 	global home_pitching_stats
 	global away_wins
 	global home_wins
+	global ties
 	away_hitting_stats = {}
 	home_hitting_stats = {}
 	away_pitching_stats = {}
 	home_pitching_stats = {}
 	away_wins = 0
 	home_wins = 0
+	ties = 0
 	for x in range(0,len(away_team_lineup)):
 		batter_a = away_team_lineup[x]
-		away_hitting_stats[batter_a] = {'PA':0,'AB':0,'H':0,'XB':0,'HR':0,'R':0,'RBI':0,'BB':0,'HBP':0,'K':0}
+		away_hitting_stats[batter_a] = {'PA':0,'AB':0,'H':0,'2B':0,'3B':0,'HR':0,'R':0,'RBI':0,'BB':0,'HBP':0,'K':0}
 		batter_h = home_team_lineup[x]
-		home_hitting_stats[batter_h] = {'PA':0,'AB':0,'H':0,'XB':0,'HR':0,'R':0,'RBI':0,'BB':0,'HBP':0,'K':0}
+		home_hitting_stats[batter_h] = {'PA':0,'AB':0,'H':0,'2B':0,'3B':0,'HR':0,'R':0,'RBI':0,'BB':0,'HBP':0,'K':0}
 	for y in range(0,len(away_team_pitchers)):
 		pitcher_a = away_team_pitchers[y]
 		away_pitching_stats[pitcher_a] = {'TBF':0,'Outs':0,'H':0,'HR':0,'RA':0,'K':0,'BB':0,'HBP':0}
@@ -979,63 +1172,64 @@ def baseball_sim():
 		pbp()
 		i += 1
 	print("-"*(8*9+5))
-	if games >= 100:
+	if games > 162:
 		print("Home Batters"+"\t"+"\t"+"PA/G"+"\t"+"H/G"+"\t"+"R/G"+"\t"+"RBI/G"+"\t"+"BB/G"+"\t"+"K/G"+"\t"+"avg")
 	else:
 		print("Home Batters"+"\t"+"\t"+"PA"+"\t"+"H"+"\t"+"R"+"\t"+"RBI"+"\t"+"BB"+"\t"+"K"+"\t"+"avg")
 	print("-"*(8*9+5))
 	for key in home_team_lineup:
-		if games >= 100:
-			print(home_team_lineup[key]+" "*(24-len(home_team_lineup[key]))+str(home_hitting_stats[home_team_lineup[key]]['PA']/games)+"\t"+str(home_hitting_stats[home_team_lineup[key]]['H']/games)+"\t"+str(home_hitting_stats[home_team_lineup[key]]['R']/games)+"\t"+str(home_hitting_stats[home_team_lineup[key]]['RBI']/games)+"\t"+str(home_hitting_stats[home_team_lineup[key]]['BB']/games)+"\t"+str(home_hitting_stats[home_team_lineup[key]]['K']/games)+"\t"+str("{:.3f}".format(home_hitting_stats[home_team_lineup[key]]['H']/home_hitting_stats[home_team_lineup[key]]['AB'])))
+		if games > 162:
+			print(home_team_lineup[key]+" "*(24-len(home_team_lineup[key]))+str("{:.3f}".format(home_hitting_stats[home_team_lineup[key]]['PA']/games))+"\t"+str("{:.3f}".format(home_hitting_stats[home_team_lineup[key]]['H']/games))+"\t"+str("{:.3f}".format(home_hitting_stats[home_team_lineup[key]]['R']/games))+"\t"+str("{:.3f}".format(home_hitting_stats[home_team_lineup[key]]['RBI']/games))+"\t"+str("{:.3f}".format(home_hitting_stats[home_team_lineup[key]]['BB']/games))+"\t"+str("{:.3f}".format(home_hitting_stats[home_team_lineup[key]]['K']/games))+"\t"+str("{:.3f}".format(home_hitting_stats[home_team_lineup[key]]['H']/home_hitting_stats[home_team_lineup[key]]['AB'])))
 		else:
 			print(home_team_lineup[key]+" "*(24-len(home_team_lineup[key]))+str(home_hitting_stats[home_team_lineup[key]]['PA'])+"\t"+str(home_hitting_stats[home_team_lineup[key]]['H'])+"\t"+str(home_hitting_stats[home_team_lineup[key]]['R'])+"\t"+str(home_hitting_stats[home_team_lineup[key]]['RBI'])+"\t"+str(home_hitting_stats[home_team_lineup[key]]['BB'])+"\t"+str(home_hitting_stats[home_team_lineup[key]]['K'])+"\t"+str("{:.3f}".format(home_hitting_stats[home_team_lineup[key]]['H']/home_hitting_stats[home_team_lineup[key]]['AB'])))
 	print("-"*(8*9+5))
-	if games >= 100:
-		print("Totals\t\t\t"+str(sum(home_hitting_stats[p]['PA'] for p in home_hitting_stats)/games)+"\t"+str(sum(home_hitting_stats[p]['H'] for p in home_hitting_stats)/games)+"\t"+str(sum(home_hitting_stats[p]['R'] for p in home_hitting_stats)/games)+"\t"+str(sum(home_hitting_stats[p]['RBI'] for p in home_hitting_stats)/games)+"\t"+str(sum(home_hitting_stats[p]['BB'] for p in home_hitting_stats)/games)+"\t"+str(sum(home_hitting_stats[p]['K'] for p in home_hitting_stats)/games)+"\t"+str("{:.3f}".format((sum(home_hitting_stats[p]['H'] for p in home_hitting_stats))/(sum(home_hitting_stats[p]['AB'] for p in home_hitting_stats)))))
+	if games > 162:
+		print("Totals\t\t\t"+str("{:.3f}".format(sum(home_hitting_stats[p]['PA'] for p in home_hitting_stats)/games))+"\t"+str("{:.3f}".format(sum(home_hitting_stats[p]['H'] for p in home_hitting_stats)/games))+"\t"+str("{:.3f}".format(sum(home_hitting_stats[p]['R'] for p in home_hitting_stats)/games))+"\t"+str("{:.3f}".format(sum(home_hitting_stats[p]['RBI'] for p in home_hitting_stats)/games))+"\t"+str("{:.3f}".format(sum(home_hitting_stats[p]['BB'] for p in home_hitting_stats)/games))+"\t"+str("{:.3f}".format(sum(home_hitting_stats[p]['K'] for p in home_hitting_stats)/games))+"\t"+str("{:.3f}".format((sum(home_hitting_stats[p]['H'] for p in home_hitting_stats))/(sum(home_hitting_stats[p]['AB'] for p in home_hitting_stats)))))
 	else:
 		print("Totals\t\t\t"+str(sum(home_hitting_stats[p]['PA'] for p in home_hitting_stats))+"\t"+str(sum(home_hitting_stats[p]['H'] for p in home_hitting_stats))+"\t"+str(sum(home_hitting_stats[p]['R'] for p in home_hitting_stats))+"\t"+str(sum(home_hitting_stats[p]['RBI'] for p in home_hitting_stats))+"\t"+str(sum(home_hitting_stats[p]['BB'] for p in home_hitting_stats))+"\t"+str(sum(home_hitting_stats[p]['K'] for p in home_hitting_stats))+"\t"+str("{:.3f}".format((sum(home_hitting_stats[p]['H'] for p in home_hitting_stats))/(sum(home_hitting_stats[p]['AB'] for p in home_hitting_stats)))))
 	print("\n")
-	if games >= 100:
+	if games > 162:
 		print("-"*(8*9+5))
 		print("Home Pitchers\t\tIP/G\tH/G\tRA\tK/G\tBB/G\tK/BB")
 	else:
-		print("Home Pitchers\t\tIP\tH\tRuns\tK\tBB\tRAA")
+		print("Home Pitchers\t\tIP\tH\tRuns\tK\tBB\tK/BB")
 	print("-"*(8*9+5))
 	for key in home_team_pitchers:
-		if games >= 100:
-			print(home_team_pitchers[key]+"\t"+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['Outs']/3/games)+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['H']/games)+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['RA']/games)+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['K']/games)+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['BB']/games)+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['K']/home_pitching_stats[home_team_pitchers[key]]['BB']))
+		if games > 162:
+			print(home_team_pitchers[key]+"\t"+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['Outs']/3/games)+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['H']/games)+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['RA']/games)+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['K']/games)+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['BB']/games)+"\t"+str("{:.3f}".format(home_pitching_stats[home_team_pitchers[key]]['K']/home_pitching_stats[home_team_pitchers[key]]['BB'])))
 		else:
-			print(home_team_pitchers[key]+"\t"+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['Outs']/3)+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['H'])+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['RA'])+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['K'])+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['BB'])+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['K']/home_pitching_stats[home_team_pitchers[key]]['BB']))
+			print(home_team_pitchers[key]+"\t"+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['Outs']/3)+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['H'])+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['RA'])+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['K'])+"\t"+str(home_pitching_stats[home_team_pitchers[key]]['BB'])+"\t"+str("{:.3f}".format(home_pitching_stats[home_team_pitchers[key]]['K']/home_pitching_stats[home_team_pitchers[key]]['BB'])))
 	print("-"*(8*9+5)+"\n\n")
-	if games >= 100:
+	if games > 162:
 		print("Away Batters"+"\t"+"\t"+"PA/G"+"\t"+"H/G"+"\t"+"R/G"+"\t"+"RBI/G"+"\t"+"BB/G"+"\t"+"K/G"+"\t"+"avg")
 	else:
 		print("Away Batters"+"\t"+"\t"+"PA"+"\t"+"H"+"\t"+"R"+"\t"+"RBI"+"\t"+"BB"+"\t"+"K"+"\t"+"avg")
 	print("-"*(8*9+5))
 	for key in away_team_lineup:
-		if games >= 100:
+		if games > 162:
 			print(away_team_lineup[key]+" "*(24-len(away_team_lineup[key]))+str(away_hitting_stats[away_team_lineup[key]]['PA']/games)+"\t"+str(away_hitting_stats[away_team_lineup[key]]['H']/games)+"\t"+str(away_hitting_stats[away_team_lineup[key]]['R']/games)+"\t"+str(away_hitting_stats[away_team_lineup[key]]['RBI']/games)+"\t"+str(away_hitting_stats[away_team_lineup[key]]['BB']/games)+"\t"+str(away_hitting_stats[away_team_lineup[key]]['K']/games)+"\t"+str("{:.3f}".format(away_hitting_stats[away_team_lineup[key]]['H']/away_hitting_stats[away_team_lineup[key]]['AB'])))
 		else:
 			print(away_team_lineup[key]+" "*(24-len(away_team_lineup[key]))+str(away_hitting_stats[away_team_lineup[key]]['PA'])+"\t"+str(away_hitting_stats[away_team_lineup[key]]['H'])+"\t"+str(away_hitting_stats[away_team_lineup[key]]['R'])+"\t"+str(away_hitting_stats[away_team_lineup[key]]['RBI'])+"\t"+str(away_hitting_stats[away_team_lineup[key]]['BB'])+"\t"+str(away_hitting_stats[away_team_lineup[key]]['K'])+"\t"+str("{:.3f}".format(away_hitting_stats[away_team_lineup[key]]['H']/away_hitting_stats[away_team_lineup[key]]['AB'])))
 	print("-"*(8*9+5))
-	if games >= 100:
+	if games > 162:
 		print("Totals\t\t\t"+str(sum(away_hitting_stats[p]['PA'] for p in away_hitting_stats)/games)+"\t"+str(sum(away_hitting_stats[p]['H'] for p in away_hitting_stats)/games)+"\t"+str(sum(away_hitting_stats[p]['R'] for p in away_hitting_stats)/games)+"\t"+str(sum(away_hitting_stats[p]['RBI'] for p in away_hitting_stats)/games)+"\t"+str(sum(away_hitting_stats[p]['BB'] for p in away_hitting_stats)/games)+"\t"+str(sum(away_hitting_stats[p]['K'] for p in away_hitting_stats)/games)+"\t"+str("{:.3f}".format((sum(away_hitting_stats[p]['H'] for p in away_hitting_stats))/(sum(away_hitting_stats[p]['AB'] for p in away_hitting_stats)))))
 	else:
 		print("Totals\t\t\t"+str(sum(away_hitting_stats[p]['PA'] for p in away_hitting_stats))+"\t"+str(sum(away_hitting_stats[p]['H'] for p in away_hitting_stats))+"\t"+str(sum(away_hitting_stats[p]['R'] for p in away_hitting_stats))+"\t"+str(sum(away_hitting_stats[p]['RBI'] for p in away_hitting_stats))+"\t"+str(sum(away_hitting_stats[p]['BB'] for p in away_hitting_stats))+"\t"+str(sum(away_hitting_stats[p]['K'] for p in away_hitting_stats))+"\t"+str("{:.3f}".format((sum(away_hitting_stats[p]['H'] for p in away_hitting_stats))/(sum(away_hitting_stats[p]['AB'] for p in away_hitting_stats)))))
 	print("\n")
-	if games >= 100:
+	if games > 162:
 		print("-"*(8*9+5))
 		print("Away Pitchers\t\tIP/G\tH/G\tRA\tK/G\tBB/G\tK/BB")
 	else:
-		print("Away Pitchers\t\tIP\tH\tRuns\tK\tBB\tRAA")
+		print("Away Pitchers\t\tIP\tH\tRuns\tK\tBB\tK/BB")
 	print("-"*(8*9+5))
 	for key in away_team_pitchers:
-		if games >= 100:
-			print(away_team_pitchers[key]+"\t"+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['Outs']/3/games)+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['H']/games)+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['RA']/games)+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['K']/games)+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['BB']/games)+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['K']/away_pitching_stats[away_team_pitchers[key]]['BB']))
+		if games > 162:
+			print(away_team_pitchers[key]+"\t"+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['Outs']/3/games)+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['H']/games)+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['RA']/games)+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['K']/games)+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['BB']/games)+"\t"+str("{:.3f}".format(away_pitching_stats[away_team_pitchers[key]]['K']/away_pitching_stats[away_team_pitchers[key]]['BB'])))
 		else:
-			print(away_team_pitchers[key]+"\t"+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['Outs']/3)+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['H'])+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['RA'])+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['K'])+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['BB'])+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['K']/away_pitching_stats[away_team_pitchers[key]]['BB']))
+			print(away_team_pitchers[key]+"\t"+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['Outs']/3)+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['H'])+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['RA'])+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['K'])+"\t"+str(away_pitching_stats[away_team_pitchers[key]]['BB'])+"\t"+str("{:.3f}".format(away_pitching_stats[away_team_pitchers[key]]['K']/away_pitching_stats[away_team_pitchers[key]]['BB'])))
 	print("-"*(8*9+5))
 	print("Home wins: "+str(home_wins))
 	print("Away wins: "+str(away_wins))
+	print("Ties: "+str(ties))
 	
 baseball_sim()
